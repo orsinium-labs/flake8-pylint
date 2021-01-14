@@ -52,3 +52,6 @@ dev = [
     "mypy",
     "pytest",
 ]
+
+[tool.flit.entrypoints."flake8.extension"]
+PL = "flake8_pylint:PyLintChecker"

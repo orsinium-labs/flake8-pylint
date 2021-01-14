@@ -10,6 +10,7 @@ from pylint.reporters import BaseReporter
 
 
 STDIN = 'stdin'
+PREFIX = 'PL'
 
 
 class Reporter(BaseReporter):
@@ -27,7 +28,12 @@ class Reporter(BaseReporter):
         self.errors.append(dict(
             row=msg.line,
             col=msg.column,
-            text='{} {} ({})'.format(msg.msg_id, msg.msg or '', msg.symbol),
+            text='{prefix}{id} {msg} ({symbol})'.format(
+                prefix=PREFIX,
+                id=msg.msg_id,
+                msg=msg.msg or '',
+                symbol=msg.symbol,
+            ),
             code=msg.msg_id,
         ))
 
