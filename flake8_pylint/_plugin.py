@@ -1,10 +1,10 @@
 # built-in
 from ast import AST
+from importlib.metadata import metadata
 from tokenize import TokenInfo
 from typing import Sequence
 
 # external
-from pylint.__pkginfo__ import version
 from pylint.lint import Run
 from pylint.reporters import BaseReporter
 
@@ -40,7 +40,7 @@ class Reporter(BaseReporter):
 
 class PyLintChecker:
     name = 'pylint'
-    version = version
+    version = metadata(name)
 
     def __init__(self, tree: AST, file_tokens: Sequence[TokenInfo], filename: str = STDIN) -> None:
         self.tree = tree
