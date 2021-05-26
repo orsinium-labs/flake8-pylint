@@ -1,6 +1,6 @@
 # built-in
 from ast import AST
-from importlib.metadata import metadata
+import sys
 from tokenize import TokenInfo
 from typing import Sequence
 
@@ -8,9 +8,24 @@ from typing import Sequence
 from pylint.lint import Run
 from pylint.reporters import BaseReporter
 
+if sys.version_info >= (3, 8):
+    from importlib import metadata as importlib_metadata
+else:
+    import importlib_metadata
+
 
 STDIN = 'stdin'
 PREFIX = 'PL'
+
+try:
+    # older pylint versions
+    from pylint.__pkginfo__ import version
+    VERSION = version
+except ImportError:
+    try:
+        VERSION = importlib_metadata.version('pylint')
+    except Exception:
+        VERSION = 'unknown'
 
 
 class Reporter(BaseReporter):
@@ -40,7 +55,7 @@ class Reporter(BaseReporter):
 
 class PyLintChecker:
     name = 'pylint'
-    version = metadata(name)
+    version = VERSION
 
     def __init__(self, tree: AST, file_tokens: Sequence[TokenInfo], filename: str = STDIN) -> None:
         self.tree = tree
