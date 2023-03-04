@@ -1,12 +1,11 @@
-# built-in
-from ast import AST
 import sys
+from ast import AST
 from tokenize import TokenInfo
 from typing import Sequence
 
-# external
 from pylint.lint import Run
 from pylint.reporters import BaseReporter
+
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
