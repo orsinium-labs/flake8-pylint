@@ -2,89 +2,133 @@
 version: "3"
 
 vars:
-  PYTHON_BIN: python3.7
-  VENVS: ./venvs/
-  FLAKE8_ENV: "{{.VENVS}}flake8"
-  MYPY_ENV:   "{{.VENVS}}mypy"
-  FLIT_ENV:   "{{.VENVS}}flit"
-  PYTEST_ENV: "{{.VENVS}}pytest"
-  SPHINX_ENV: "{{.VENVS}}sphinx"
-  ISORT_ENV:  "{{.VENVS}}isort"
+  PYTHON: python3
+  VENVS: .venvs
+  TEST_ENV: .venvs/test
+  LINT_ENV: .venvs/lint
+  DOCS_ENV: .venvs/docs
+  TEST_PYTHON: "{{.TEST_ENV}}/bin/python3"
+  LINT_PYTHON: "{{.LINT_ENV}}/bin/python3"
 
 env:
   FLIT_ROOT_INSTALL: "1"
 
 tasks:
-  venv:create:
+  install:flit:
     status:
-      - "test -f {{.ENV}}/bin/activate"
+      - which flit
     cmds:
-      - "{{.PYTHON_BIN}} -m venv {{.ENV}}"
-      - "{{.ENV}}/bin/python3 -m pip install -U pip setuptools wheel"
-  flit:init:
+      - python3 -m pip install flit
+  venv:test:
     status:
-      - "test -f {{.FLIT_ENV}}/bin/flit"
-    deps:
-      - task: venv:create
-        vars:
-          ENV: "{{.FLIT_ENV}}"
+      - test -d {{.TEST_ENV}}
     cmds:
-      - "{{.FLIT_ENV}}/bin/python3 -m pip install flit"
-  flit:install:
+      - "{{.PYTHON}} -m venv {{.TEST_ENV}}"
+  venv:lint:
+    status:
+      - test -d {{.LINT_ENV}}
+    cmds:
+      - "{{.PYTHON}} -m venv {{.LINT_ENV}}"
+  install:test:
     sources:
       - pyproject.toml
-      - "{{.ENV}}/bin/activate"
     deps:
-      - flit:init
-      - task: venv:create
-        vars:
-          ENV: "{{.ENV}}"
+      - install:flit
+      - venv:test
     cmds:
       - >
-        {{.FLIT_ENV}}/bin/flit install
-        --python={{.ENV}}/bin/python3
+        flit install
+        --python {{.TEST_PYTHON}}
+        --extras=test
         --deps=production
-        --extras={{.EXTRA}}
-  flit:build:
-    deps:
-      - flit:init
-    cmds:
-      - "{{.FLIT_ENV}}/bin/flit build"
-  flit:upload:
-    deps:
-      - flit:build
-    cmds:
-      - "{{.FLIT_ENV}}/bin/flit publish"
-
-  flake8:run:
+        --symlink
+  install:lint:
     sources:
-      - "**/*.py"
+      - pyproject.toml
     deps:
-      - task: flit:install
-        vars:
-          ENV: "{{.FLAKE8_ENV}}"
-          EXTRA: dev
+      - install:flit
+      - venv:lint
     cmds:
-      - "{{.FLAKE8_ENV}}/bin/flake8 ."
+      - >
+        flit install
+        --python {{.LINT_PYTHON}}
+        --extras=lint
+        --deps=production
+        --symlink
 
-  mypy:run:
-    sources:
-      - deal/**/*.py
+  release:
+    desc: generate and upload a new release
     deps:
-      - task: flit:install
-        vars:
-          ENV: "{{.MYPY_ENV}}"
-          EXTRA: dev
+      - install:flit
     cmds:
-      - "{{.MYPY_ENV}}/bin/mypy --ignore-missing-imports --allow-redefinition deal/"
+      - which gh
+      - test {{.CLI_ARGS}}
+      - cat flake8_pylint/__init__.py | grep {{.CLI_ARGS}}
+      - rm -rf dist/
+      - flit build
+      - flit publish
+      - git tag {{.CLI_ARGS}}
+      - git push
+      - git push --tags
+      - gh release create --generate-notes {{.CLI_ARGS}}
+      - gh release upload {{.CLI_ARGS}} ./dist/*
 
-  isort:run:
-    sources:
-      - "**/*.py"
+  pytest:
+    desc: "run Python tests"
     deps:
-      - task: flit:install
-        vars:
-          ENV: "{{.ISORT_ENV}}"
-          EXTRA: dev
+      - install:test
     cmds:
-      - "{{.ISORT_ENV}}/bin/isort ."
+      - "{{.TEST_PYTHON}} -m pytest {{.CLI_ARGS}}"
+  flake8:
+    desc: "lint Python code"
+    deps:
+      - install:lint
+    cmds:
+      - "{{.LINT_PYTHON}} -m flake8 {{.CLI_ARGS}} ."
+  mypy:
+    desc: "check type annotations"
+    deps:
+      - install:lint
+    cmds:
+      - "{{.LINT_PYTHON}} -m mypy {{.CLI_ARGS}}"
+  unify:
+    desc: "convert double quotes to single ones"
+    deps:
+      - install:lint
+    cmds:
+      - "{{.LINT_PYTHON}} -m unify -r -i --quote=\\' {{.CLI_ARGS}} flake8_pylint tests"
+  isort:
+    desc: "sort imports"
+    deps:
+      - install:lint
+    cmds:
+      - "{{.LINT_PYTHON}} -m isort {{.CLI_ARGS}} ."
+  isort:check:
+    desc: "sort imports"
+    deps:
+      - install:lint
+    cmds:
+      - "{{.LINT_PYTHON}} -m isort --check {{.CLI_ARGS}} ."
+
+  # groups
+  format:
+    desc: "run all code formatters"
+    cmds:
+      - task: isort
+      - task: unify
+  lint:
+    desc: "run all linters"
+    cmds:
+      - task: flake8
+      - task: mypy
+      - task: isort:check
+  test:
+    desc: "run all tests"
+    cmds:
+      - task: pytest
+  all:
+    desc: "run all code formatters, linters, and tests"
+    cmds:
+      - task: format
+      - task: lint
+      - task: test
