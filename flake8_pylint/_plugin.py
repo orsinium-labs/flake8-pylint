@@ -35,6 +35,9 @@ except ImportError:
 
 
 class Reporter(BaseReporter):
+    """PyLint reporter that memorizes all errors to be reported without printing them.
+    """
+
     def __init__(self) -> None:
         self.errors: list[dict[str, Any]] = []
         super().__init__()
@@ -46,12 +49,19 @@ class Reporter(BaseReporter):
         # ignore `invalid syntax` messages, it is already checked by `pycodestyle`
         if msg.msg_id == 'E0001':
             return
+
+        # flake8 stopped supporting 4-digit error codes,
+        # so we drop the first digit of the code.
+        # https://github.com/PyCQA/flake8/issues/1759
+        code = msg.msg_id[0] + msg.msg_id[2:]
+        assert len(code) == 4
+
         self.errors.append(dict(
             row=msg.line,
             col=msg.column,
             text='{prefix}{id} {msg} ({symbol})'.format(
                 prefix=PREFIX,
-                id=msg.msg_id,
+                id=code,
                 msg=msg.msg or '',
                 symbol=msg.symbol,
             ),
@@ -60,6 +70,8 @@ class Reporter(BaseReporter):
 
 
 class PyLintChecker:
+    """The flake8 plugin entry point.
+    """
     name = 'pylint'
     version = VERSION
 

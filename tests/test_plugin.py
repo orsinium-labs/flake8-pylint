@@ -23,7 +23,7 @@ def test_smoke(tmp_path: Path) -> None:
     assert len(msgs) == 3
     for msg in msgs:
         assert 'example.py:' in msg
-        assert ':1: PLC0' in msg
-    assert 'PLC0114 Missing module docstring (missing-module-docstring)' in msgs[0]
-    assert 'PLC0116 Missing function or method docstring' in msgs[1]
-    assert 'PLC0103 Function name "f"' in msgs[2]
+        assert ':1: PLC' in msg
+    assert 'PLC114 Missing module docstring (missing-module-docstring)' in msgs[0]
+    assert 'PLC116 Missing function or method docstring' in msgs[1]
+    assert 'PLC103 Function name "f"' in msgs[2]
