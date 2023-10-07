@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from ast import AST
+from contextlib import suppress
 from tokenize import TokenInfo
 from typing import TYPE_CHECKING, Any, Iterator, Sequence
 
@@ -14,24 +15,26 @@ if TYPE_CHECKING:
     from pylint.reporters.ureports.nodes import BaseLayout
 
 
-if sys.version_info >= (3, 8):
-    from importlib import metadata as importlib_metadata
-else:
-    import importlib_metadata
-
-
 STDIN = 'stdin'
 PREFIX = 'PL'
 
-try:
-    # older pylint versions
-    from pylint.__pkginfo__ import version
-    VERSION = version
-except ImportError:
+
+def get_version() -> str:
+    with suppress(ImportError):
+        from pylint.__pkginfo__ import version  # type: ignore[attr-defined]
+        return version
+    with suppress(ImportError):
+        from pylint.__pkginfo__ import __version__
+        return __version__
+    if sys.version_info >= (3, 8):
+        from importlib import metadata as importlib_metadata
+    else:
+        import importlib_metadata
     try:
-        VERSION = importlib_metadata.version('pylint')
+        return importlib_metadata.version('pylint')
     except Exception:
-        VERSION = 'unknown'
+        pass
+    return 'unknown'
 
 
 class Reporter(BaseReporter):
@@ -73,7 +76,7 @@ class PyLintChecker:
     """The flake8 plugin entry point.
     """
     name = 'pylint'
-    version = VERSION
+    version = get_version()
 
     def __init__(
         self,
