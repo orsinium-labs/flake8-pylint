@@ -9,7 +9,7 @@ from textwrap import dedent
 def test_smoke(tmp_path: Path) -> None:
     file_path = tmp_path / 'example.py'
     source = """
-        def f():
+        def F():
             pass
     """
     file_path.write_text(dedent(source))
@@ -26,4 +26,4 @@ def test_smoke(tmp_path: Path) -> None:
         assert ':1: PLC' in msg
     assert 'PLC114 Missing module docstring (missing-module-docstring)' in msgs[0]
     assert 'PLC116 Missing function or method docstring' in msgs[1]
-    assert 'PLC103 Function name "f"' in msgs[2]
+    assert 'PLC103 Function name "F"' in msgs[2]
