@@ -86,6 +86,6 @@ class PyLintChecker:
 
     def run(self) -> Iterator[tuple[int, int, str, type]]:
         reporter = Reporter()
-        Run([self.filename], reporter=reporter, do_exit=False)
+        Run([self.filename], reporter=reporter, exit=False)
         for error in reporter.errors:
             yield error['row'], error['col'], error['text'], type(self)
